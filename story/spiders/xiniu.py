@@ -52,6 +52,6 @@ class XiniuSpider(scrapy.Spider):
 if __name__ == '__main__':
     # test
     from scrapy.crawler import CrawlerProcess
-    process = CrawlerProcess()
+    process = CrawlerProcess(settings={"User-Agent": "Mozilla/5.0"})
     process.crawl(XiniuSpider)
     process.start()
