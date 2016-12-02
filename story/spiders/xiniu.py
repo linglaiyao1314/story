@@ -1,6 +1,6 @@
 # coding=utf-8
 import scrapy
-from scrapy.http import FormRequest, Request, HtmlResponse
+from scrapy.http import FormRequest
 from story.items import StoryItem
 import simplejson as json
 
@@ -24,8 +24,8 @@ class XiniuSpider(scrapy.Spider):
             return
         for data in story_data:
             item = StoryItem()
-            item["summary"] = data["summary"]
-            item["title"] = data["title"]
+            item["article_summary"] = data["summary"]
+            item["article_title"] = data["title"]
             item["state"] = data["state"]
             item["author"] = data["nickname"]
             item["article_link"] = data["shareurl"]
@@ -44,7 +44,7 @@ class XiniuSpider(scrapy.Spider):
         content_list = json.loads(response.body.decode("utf-8"))["data"]
         content = ""
         for c in content_list:
-            section = c["content"].replace("<br>", "").strip()
+            section = c["article_content"].replace("<br>", "").strip()
             content += section + "\n"
         content = "\n".join([c["content"].strip() for c in content_list])
         item["article_content"] = content
