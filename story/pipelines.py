@@ -6,11 +6,6 @@
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import pymongo
 
-class StoryPipeline(object):
-    def process_item(self, item, spider):
-        return item
-
-
 class MongoPipeline(object):
     collection_name = "xiniu"
 

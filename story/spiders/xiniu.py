@@ -1,3 +1,4 @@
+# coding=utf-8
 import scrapy
 from scrapy.http import FormRequest, Request, HtmlResponse
 from story.items import StoryItem
@@ -14,7 +15,7 @@ class XiniuSpider(scrapy.Spider):
         for url in urls:
             yield FormRequest(url=url,
                               callback=self.channel_parse,
-                              formdata={"channel": "1", "hot": "1", "start": "0", "limit": "20"},
+                              formdata={"channel": "1", "hot": "1", "start": "0", "limit": "100"},
                               headers={"User-Agent": "Mozilla/5.0"})
 
     def channel_parse(self, response):
@@ -49,9 +50,22 @@ class XiniuSpider(scrapy.Spider):
         item["article_content"] = content
         yield item
 
+
 if __name__ == '__main__':
     # test
+    import sys
     from scrapy.crawler import CrawlerProcess
-    process = CrawlerProcess(settings={"User-Agent": "Mozilla/5.0"})
+
+    sys.path.append(r"C:/test/story/story")
+    # 初始化一个下载中间件的配置
+    process = CrawlerProcess(settings={"User-Agent": "Mozilla/5.0",
+                                       "SPIDER_MIDDLEWARES":
+                                           {'story.middlewares.MyCustomSpiderMiddleware': 100},
+                                       "DOWNLOADER_MIDDLEWARES":
+                                           {'story.middlewares.MyCustomDownloaderMiddleware': 100},
+                                       "ITEM_PIPELINES": {'story.pipelines.MongoPipeline': 300},
+                                       "MONGO_URI": "localhost:27017",
+                                       "MONGO_DATABASE": "story"
+                                       })
     process.crawl(XiniuSpider)
     process.start()
