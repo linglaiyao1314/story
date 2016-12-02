@@ -8,7 +8,7 @@ import pymongo
 
 
 class MongoPipeline(object):
-    collection_name = "xiniu"
+    collection_name = "acfun"
 
     def __init__(self, mongo_uri, mongo_db):
         self.mongo_uri = mongo_uri
@@ -29,5 +29,6 @@ class MongoPipeline(object):
         self.client.close()
 
     def process_item(self, item, spider):
+        item = {key: value[0] for key, value in item.items()}
         self.db[self.collection_name].insert(dict(item))
         return item
