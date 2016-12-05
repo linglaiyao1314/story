@@ -4,6 +4,7 @@ from scrapy.http.request import Request
 from scrapy.http.response import Response
 from story.items import StoryItem
 
+
 class MyCustomDownloaderMiddleware(object):
     """
     下载中间件有三个基本的方法：

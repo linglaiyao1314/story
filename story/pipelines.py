@@ -30,5 +30,20 @@ class MongoPipeline(object):
 
     def process_item(self, item, spider):
         item = {key: value[0] for key, value in item.items()}
-        self.db[self.collection_name].insert(dict(item))
+        if self.db[self.collection_name].find_one({"article_id": item["article_id"]}):
+            return item
+        self.db[self.collection_name].insert(item)
         return item
+
+
+class SentimentAnalysisPipeline(object):
+    analysis_url = "http://ictclas.nlpir.org/nlpir/index4/getEmotionResult.do"
+
+    def process_item(self, item, spider):
+        pass
+
+    def open_spider(self, spider):
+        pass
+
+    def close_spider(self, spider):
+        pass

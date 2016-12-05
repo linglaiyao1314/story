@@ -11,25 +11,40 @@ UNICODE_PATTERN = re.compile(u"[\u4e00-\u9fa5|\w\W]")
 
 
 # 过滤出字符串的中文
-def parse_chinese(s):
-    return filter(lambda x: re.match(CHINESE_PATTERN, x), s)
+def parse_chinese(s, to_str):
+    filter_list = filter(lambda x: re.match(CHINESE_PATTERN, x), s)
+    if to_str:
+        return "".join(filter_list)
+    return filter_list
 
 
 # 过滤字符串中非中文串
-def parse_others(s):
-    return filter(lambda x: re.match(NOT_CHINESE_PATTERN, x), s)
+def parse_others(s, to_str=True):
+    filter_list = filter(lambda x: re.match(NOT_CHINESE_PATTERN, x), s)
+    if to_str:
+        return "".join(filter_list)
+    return filter_list
 
 
 # 过滤字符串中的数字
-def get_number(s):
-    return filter(lambda x: re.match(NUMBER_PATTERN, x), s)
+def get_number(s, to_str=True):
+    filter_list = filter(lambda x: re.match(NUMBER_PATTERN, x), s)
+    if to_str:
+        return "".join(filter_list)
+    return filter_list
 
 
 # 过滤出字符串中所有unicode编码的内容
-def get_unicodestr(s):
-    return filter(lambda x: re.match(UNICODE_PATTERN, x), s)
+def get_unicodestr(s, to_str=True):
+    filter_list = filter(lambda x: re.match(UNICODE_PATTERN, x), s)
+    if to_str:
+        return "".join(filter_list)
+    return filter_list
 
 
+# ===========================
+# 分词工具
+# ===========================
 @contextmanager
 def nlpserver():
     pynlpir.open()
