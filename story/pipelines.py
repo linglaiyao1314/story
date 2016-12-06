@@ -8,7 +8,6 @@ import pymongo
 
 
 class MongoPipeline(object):
-    collection_name = "acfun"
 
     def __init__(self, mongo_uri, mongo_db):
         self.mongo_uri = mongo_uri
@@ -30,9 +29,9 @@ class MongoPipeline(object):
 
     def process_item(self, item, spider):
         item = {key: value[0] for key, value in item.items()}
-        if self.db[self.collection_name].find_one({"article_id": item["article_id"]}):
-            return item
-        self.db[self.collection_name].insert(item)
+        # if self.db[spider.collection_name].find_one({"article_id": item["article_id"]}):
+        #     return item
+        self.db[spider.collection_name].insert(item)
         return item
 
 
