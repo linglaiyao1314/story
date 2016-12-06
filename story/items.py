@@ -34,3 +34,8 @@ class StoryItem(BaseArticleItem):
 class PengpaiItem(BaseItem):
     """"""
     article_image = scrapy.Field()
+
+
+class NeteasyItem(BaseItem):
+    """"""
+    article_image = scrapy.Field()
