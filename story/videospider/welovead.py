@@ -29,8 +29,8 @@ class WeloveadSpider(scrapy.Spider):
                           meta=response.meta)
         next_url = response.xpath("//div[@class='page']//a[@class='next']/@href").extract()
         # 翻页
-        # if next_url:
-        #     yield Request(url=self.domain + next_url[0], callback=self.parse_url, meta=response.meta)
+        if next_url:
+            yield Request(url=self.domain + next_url[0], callback=self.parse_url, meta=response.meta)
 
     def parse(self, response):
         """

@@ -22,8 +22,8 @@ class PengpaiSpider(scrapy.Spider):
             yield Request(url=category_url,
                           callback=self.parse_url,
                           meta={"article_category": catagory})
-        next_urls = ["http://www.thepaper.cn/load_index.jsp?pageidx={0}".format(i) for i in range(2, 6)]
 
+        next_urls = ["http://www.thepaper.cn/load_index.jsp?pageidx={0}".format(i) for i in range(2, 6)]
         for url in next_urls:
             yield Request(url=url,
                           callback=self.parse_url,
