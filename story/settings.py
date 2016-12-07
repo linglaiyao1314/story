@@ -11,7 +11,9 @@
 
 BOT_NAME = 'story'
 
-SPIDER_MODULES = ['story.spiders']
+# 爬虫模块集合
+SPIDER_MODULES = ['story.spiders', 'story.videospider']
+# 通过genspider命令创建spider到指定的NEWSPIDER_MODULE目录下
 NEWSPIDER_MODULE = 'story.spiders'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
@@ -68,6 +70,7 @@ DEFAULT_REQUEST_HEADERS = {
 ITEM_PIPELINES = {
     'story.pipelines.MongoPipeline': 300,
 }
+# BaseMongoSetting
 MONGO_URI = "localhost:27017"
 MONGO_DATABASE = "story"
 

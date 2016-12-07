@@ -28,11 +28,13 @@ class MongoPipeline(object):
         self.client.close()
 
     def process_item(self, item, spider):
-        item = {key: value[0] for key, value in item.items()}
-        # if self.db[spider.collection_name].find_one({"article_id": item["article_id"]}):
-        #     return item
-        self.db[spider.collection_name].insert(item)
-        return item
+        if spider.name == "welovead":
+            insert_item = {key: value[0] for key, value in item.items() if value}
+            insert_item["ad_uri"] = item["ad_uri"]
+        else:
+            insert_item = {key: value[0] for key, value in item.items() if value}
+        self.db[spider.collection_name].insert(insert_item)
+        return insert_item
 
 
 class SentimentAnalysisPipeline(object):
