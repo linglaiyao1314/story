@@ -13,11 +13,13 @@ class LeifengSpider(scrapy.Spider):
     collection_name = "news"
 
     def start_requests(self):
-        url = {"technology": "http://www.leiphone.com/"}
+        url = {"technology": "http://www.leiphone.com/category/weiwu/page/"}
         for category, category_url in url.items():
-            yield Request(url=category_url,
-                          callback=self.parse_url,
-                          meta={"article_category": category})
+            for i in range(1, 10):
+                print("url: " + category_url + str(i))
+                yield Request(url=category_url + str(i),
+                              callback=self.parse_url,
+                              meta={"article_category": category})
 
     def parse_url(self, response):
         meta = response.meta
