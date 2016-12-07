@@ -10,7 +10,7 @@ class LeifengSpider(scrapy.Spider):
     name = "leifeng_tec"
 
     domain = "http://www.leiphone.com/"
-    collection_name = "leifeng_tec"
+    collection_name = "news"
 
     def start_requests(self):
         url = {"technology": "http://www.leiphone.com/"}
