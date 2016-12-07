@@ -29,8 +29,8 @@ class WeloveadSpider(scrapy.Spider):
                           meta=response.meta)
         next_url = response.xpath("//div[@class='page']//a[@class='next']/@href").extract()
         # 翻页
-        if next_url:
-            yield Request(url=self.domain + next_url[0], callback=self.parse_url, meta=response.meta)
+        # if next_url:
+        #     yield Request(url=self.domain + next_url[0], callback=self.parse_url, meta=response.meta)
 
     def parse(self, response):
         """
@@ -42,6 +42,7 @@ class WeloveadSpider(scrapy.Spider):
         item["designer"] = response.xpath("//a[@class='iconAgency']//text()").extract()
         item["description"] = response.xpath("//div[@id='main']/h1/text()").extract()
         item["area"] = meta["area"]
+        item["ad_id"] = [self.name + "-" + response.url.split("/")[-1]]
         # 获取行业和媒体
         for rule in response.xpath("//table[@class='tabWork information_1']//td//a"):
             href = rule.xpath("./@href").extract()

@@ -23,6 +23,12 @@ class PengpaiSpider(scrapy.Spider):
             yield Request(url=category_url,
                           callback=self.parse_url,
                           meta={"article_category": catagory})
+        other_urls = ["http://ent.163.com/special/000380VU/newsdata_index_0{0}.js?callback=data_callback".format(i)
+                      for i in range(2, 6)]
+        for url in other_urls:
+            yield Request(url=url,
+                          callback=self.parse_url,
+                          meta={"article_category": "gossip"})
 
     def parse_url(self, response):
         meta = response.meta
@@ -33,7 +39,7 @@ class PengpaiSpider(scrapy.Spider):
             yield Request(url=url,
                           callback=self.parse,
                           meta={"article_link": url,
-                                "article_id": "neteasy-{0}".format(item["tienum"]),
+                                "article_id": self.name + "-" + str(item["tienum"]),
                                 "article_category": meta["article_category"],
                                 "article_image": item["imgurl"],
                                 "article_title": item["title"],

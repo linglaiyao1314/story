@@ -4,7 +4,7 @@ from scrapy.http import Request
 from story.items import PengpaiItem
 from scrapy.loader import ItemLoader
 from scrapy.loader.processors import MapCompose, Join
-from utils.text_process import get_number
+from utils.text_process import get_number, parse_others
 
 
 class PengpaiSpider(scrapy.Spider):
@@ -22,6 +22,12 @@ class PengpaiSpider(scrapy.Spider):
             yield Request(url=category_url,
                           callback=self.parse_url,
                           meta={"article_category": catagory})
+        next_urls = ["http://www.thepaper.cn/load_index.jsp?pageidx={0}".format(i) for i in range(2, 6)]
+
+        for url in next_urls:
+            yield Request(url=url,
+                          callback=self.parse_url,
+                          meta={"article_category": "general"})
 
     def parse_url(self, response):
         meta = response.meta
@@ -33,7 +39,7 @@ class PengpaiSpider(scrapy.Spider):
             yield Request(url=url,
                           callback=self.parse,
                           meta={"article_link": url,
-                                "article_id": get_number(url),
+                                "article_id": self.name + "-" + get_number(url),
                                 "article_category": meta["article_category"],
                                 "article_image": image})
 
@@ -45,7 +51,8 @@ class PengpaiSpider(scrapy.Spider):
         loader = ItemLoader(item=PengpaiItem(), response=response)
         # add xpath
         loader.add_xpath("author", "//div[@class='news_about']/p[1]//text()")
-        loader.add_xpath("pubtime", "//div[@class='news_about']/p[2]//text()")
+        loader.add_xpath("pubtime", "//div[@class='news_about']/p[2]//text()",
+                         MapCompose(lambda x: parse_others(x).strip()[:-1].strip()))
         loader.add_xpath("article_content", "//div[@data-size='standard']//text()",
                          MapCompose(lambda x: x.strip() if x.strip() else None),
                          Join("\n"))

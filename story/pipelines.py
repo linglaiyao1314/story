@@ -1,10 +1,6 @@
 # -*- coding: utf-8 -*-
-
-# Define your item pipelines here
-#
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import pymongo
+import time
 
 
 class MongoPipeline(object):
@@ -33,6 +29,9 @@ class MongoPipeline(object):
             insert_item["ad_uri"] = item["ad_uri"]
         else:
             insert_item = {key: value[0] for key, value in item.items() if value}
+            if self.db[spider.collection_name].find_one({"article_id": insert_item["article_id"]}):
+                return insert_item
+        insert_item.update({"capture_time": int(time.time())})
         self.db[spider.collection_name].insert(insert_item)
         return insert_item
 

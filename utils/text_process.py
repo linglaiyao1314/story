@@ -35,7 +35,7 @@ def get_number(s, to_str=True):
 
 
 # 过滤出字符串中所有unicode编码的内容
-def get_unicodestr(s, to_str=True):
+def parse_unicodestr(s, to_str=True):
     filter_list = filter(lambda x: re.match(UNICODE_PATTERN, x), s)
     if to_str:
         return "".join(filter_list)
@@ -84,3 +84,4 @@ def segment(content, pos_tagging=True, pos_names='parent', pos_english=True):
 
 if __name__ == '__main__':
     print("".join(get_number("'/member/user.aspx?uid=126155'")))
+    print("".join(parse_others("2016-12-07 12:58 来源：澎湃新闻")))
