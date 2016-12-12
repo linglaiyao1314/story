@@ -8,11 +8,9 @@ from scrapy.loader.processors import MapCompose, Join
 from utils.text_process import get_number
 
 
-class PengpaiSpider(scrapy.Spider):
+class NeteasySpider(scrapy.Spider):
     name = "neteasy"
-
-    # 综合新闻区
-    domain = "http://www.thepaper.cn/"
+    domain = "http://ent.163.com//"
     # 存储的collection
     collection_name = "news"
 
