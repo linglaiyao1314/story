@@ -76,5 +76,5 @@ if __name__ == '__main__':
                                        "MONGO_URI": "localhost:27017",
                                        "MONGO_DATABASE": "story"
                                        })
-    process.crawl(PengpaiSpider)
+    process.crawl(NeteasySpider)
     process.start()
