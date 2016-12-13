@@ -22,13 +22,10 @@ class BaseItem(scrapy.Item):
     article_category = scrapy.Field()
 
 
-class BaseArticleItem(BaseItem):
+class AcFunItem(BaseItem):
+    """"""
     article_comments = scrapy.Field()
     article_clicks = scrapy.Field()
-
-
-class StoryItem(BaseArticleItem):
-    state = scrapy.Field()
 
 
 class PengpaiItem(BaseItem):

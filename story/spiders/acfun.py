@@ -1,7 +1,7 @@
 # coding=utf-8
 import scrapy
 from scrapy.http import Request
-from story.items import BaseArticleItem
+from story.items import AcFunItem
 from scrapy.loader import ItemLoader
 from scrapy.loader.processors import MapCompose, Join
 import simplejson as json
@@ -11,7 +11,7 @@ from utils.text_process import get_number
 class AcFunSpider(scrapy.Spider):
     name = "acfun"
 
-    # 综合区的文章
+    collection_name = "acfun"
     domain = "http://www.acfun.tv"
     user_domain = "http://www.acfun.tv/u/"
     content_view_url = "http://www.acfun.tv/content_view.aspx"
@@ -51,7 +51,7 @@ class AcFunSpider(scrapy.Spider):
         解析具体的文章页面
         """
         meta = response.meta
-        loader = ItemLoader(item=BaseArticleItem(), response=response)
+        loader = ItemLoader(item=AcFunItem(), response=response)
         # add xpath
         loader.add_xpath("author", "//a[@id='btn-follow-author']/@data-name")
         loader.add_xpath("pubtime", "//span[@class='time']//text()")
@@ -87,17 +87,7 @@ class AcFunSpider(scrapy.Spider):
 
 if __name__ == '__main__':
     # test
-    import sys
     from scrapy.crawler import CrawlerProcess
-    import logging
-    from scrapy.utils.log import configure_logging
-    configure_logging(install_root_handler=False)
-    logging.basicConfig(
-        filename='log.txt',
-        format='%(levelname)s: %(message)s',
-        level=logging.INFO
-    )
-    sys.path.append(r"C:/test/story/story")
     # 初始化一个下载中间件的配置
     process = CrawlerProcess(settings={"User-Agent": "Mozilla/5.0",
                                        "ITEM_PIPELINES": {'story.pipelines.MongoPipeline': 300},
