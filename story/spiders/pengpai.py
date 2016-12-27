@@ -74,7 +74,9 @@ if __name__ == '__main__':
     process = CrawlerProcess(settings={"User-Agent": "Mozilla/5.0",
                                        "ITEM_PIPELINES": {'story.pipelines.MongoPipeline': 300},
                                        "MONGO_URI": "localhost:27017",
-                                       "MONGO_DATABASE": "story"
+                                       "MONGO_DATABASE": "story",
+                                       "LOG_LEVEL": "INFO",
+                                       "STATS_DUMP": True
                                        })
     process.crawl(PengpaiSpider)
     process.start()
