@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import pymongo
 import time
+from story.items import AcFunUserItem, AcFunArticleItem
 
 
 class MongoPipeline(object):
@@ -24,17 +25,18 @@ class MongoPipeline(object):
         self.client.close()
 
     def process_item(self, item, spider):
-        if spider.name == "welovead":
-            insert_item = {key: value[0] for key, value in item.items() if value}
-            insert_item["ad_uri"] = item["ad_uri"]
-            if self.db[spider.collection_name].find_one({"ad_id": insert_item["ad_id"]}):
-                return insert_item
+        insert_item = {key: value[0] for key, value in item.items() if value}
+        if isinstance(item, AcFunUserItem):
+            if self.db["user"].find_one({"user_id": insert_item["user_id"]}):
+                pass
+            else:
+                self.db["user"].insert(insert_item)
+            return insert_item
         else:
-            insert_item = {key: value[0] for key, value in item.items() if value}
             if self.db[spider.collection_name].find_one({"article_id": insert_item["article_id"]}):
                 return insert_item
-        insert_item.update({"capture_time": int(time.time())})
-        self.db[spider.collection_name].insert(insert_item)
+            insert_item.update({"capture_time": int(time.time())})
+            self.db[spider.collection_name].insert(insert_item)
         return insert_item
 
 
