@@ -2,6 +2,7 @@
 import scrapy
 from scrapy.http import Request
 from scrapy.selector import Selector
+from scrapy.statscollectors import MemoryStatsCollector
 import simplejson as json
 import re
 
@@ -57,7 +58,6 @@ class AcfunSpider(scrapy.Spider):
             yield Request(url=base_url + "index_{0}.htm".format(int(page) + 1), callback=self.parse_article_page)
 
     def parse_user_page(self, response):
-        self.logger.warning("[User] Start to crawler use page %s" % response.url)
         meta = response.meta
         user_item = AcfunUserItem()
         # 基本信息提取
@@ -87,7 +87,6 @@ class AcfunSpider(scrapy.Spider):
         2.返回所有Item， 提取新的user，并请求user信息
         3.对关系页进行翻页
         """
-        self.logger.warning("[Relation] Start to crawler relation page %s" % response.url)
         meta = response.meta
         # 提取json中的关注信息
         relation_datas = json.loads(response.text)
@@ -110,7 +109,7 @@ class AcfunSpider(scrapy.Spider):
                                                       ftype=meta["relation_type"],
                                                       page=meta["page"] + 1),
                           callback=self.parse_relationship,
-                          meta={"user_id": meta["user_id"], "ftype": meta["relation_type"], "page": meta["page"] + 1})
+                          meta={"user_id": meta["user_id"], "relation_type": meta["relation_type"], "page": meta["page"] + 1})
 
     def get_icon_link(self, raw_link):
         return re.search(ICON_PATTERN, raw_link).group()[2:-2]
@@ -126,7 +125,7 @@ if __name__ == '__main__':
                                        "ITEM_PIPELINES": {'story.pipelines.MongoPipeline': 300},
                                        "MONGO_URI": "localhost:27017",
                                        "MONGO_DATABASE": "story",
-                                       "LOG_LEVEL": "WARNING"
+                                       "LOG_LEVEL": "DEBUG"
                                        })
     process.crawl(AcfunSpider)
     process.start()

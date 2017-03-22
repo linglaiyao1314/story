@@ -31,6 +31,7 @@ class AcfunItemProcess(ItemProcess):
             "user_icon_link": item["user_icon_link"],
             "user_id": int(item["user_id"]),
             "user_info": item["user_info"],
+            "user_name": item["user_name"],
             "scheme": "acfun_user",
             "unique": ["user_id"]
         }
@@ -57,6 +58,7 @@ class MongoPipeline(object):
     def __init__(self, mongo_uri, mongo_db):
         self.mongo_uri = mongo_uri
         self.mongo_db = mongo_db
+        self.count = 0
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -84,6 +86,9 @@ class MongoPipeline(object):
             self.db[collection].update_one(condition_clauses, {"$set": item})
         else:
             self.db[collection].insert_one(item)
+            self.count += 1
+        if self.count % 2000 == 0:
+            print(spider.crawler.stats.get_stats())
         return item
 
 
