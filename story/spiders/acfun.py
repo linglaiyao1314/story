@@ -1,128 +1,132 @@
 # coding=utf-8
 import scrapy
 from scrapy.http import Request
-from story.items import AcFunArticleItem, AcFunUserItem
-from scrapy.loader import ItemLoader
-from scrapy.loader.processors import MapCompose, Join
-from utils.text_process import get_number
+from scrapy.selector import Selector
 import simplejson as json
+import re
+
+from story.items import AcfunUserItem, AcfunUserFllowItem, AcfunUserFansItem
+from utils.text_process import get_number
+
+ICON_PATTERN = re.compile("(\(.*?\))")
 
 
-class AcFunSpider(scrapy.Spider):
-    # spider name
+class AcfunSpider(scrapy.Spider):
+    FOLLOW = "flow"  # 关注
+    FANS = "flowed"  # 粉丝
     name = "acfun"
-    # mongo collection name
-    collection_name = "acfun"
     domain = "http://www.acfun.cn"
-    # 用户基础信息页
-    user_domain = "http://www.acfun.cn/u/"
-    # 评论页
-    comment_list_json_url = "http://www.acfun.cn/comment_list_json.aspx"
-    # 用户信息详情页
-    page_url = "http://www.acfun.cn/space/next"
+    user_domain = "http://www.acfun.cn/u/{0}.aspx"
+    flow_domain = "http://www.acfun.cn/space/next?uid={user_id}&type={ftype}&orderBy=2&pageNo={page}"
 
     def start_requests(self):
         """
-        从文章页开始抓取，整体流程：
-         1 获取文章链接
-         2 获取用户信息 -> 获取用户文章链接 -> 获取用户关注与粉丝信息-> 2
-         3 获取评论信息 -> 2
+        以文章区为起始页开始抓取
         """
-        catagory_urls = {"综合": "http://www.acfun.tv/v/list110/index.htm",
-                         "工作情感": "http://www.acfun.tv/v/list73/index.htm",
-                         "动漫文化": "http://www.acfun.tv/v/list74/index.htm",
-                         "漫画轻小说": "http://www.acfun.tv/v/list75/index.htm",
-                         "游戏": "http://www.acfun.tv/v/list164/index.htm"}
+        start_urls = ["http://www.acfun.cn/v/list110/index.htm",
+                      "http://www.acfun.cn/v/list73/index.htm",
+                      "http://www.acfun.cn/v/list74/index.htm",
+                      "http://www.acfun.cn/v/list75/index.htm",
+                      "http://www.acfun.cn/v/list164/index.htm"]
         # 提取出所有url，然后进行请求
-        for catagory, category_url in catagory_urls.items():
-            yield Request(url=category_url, callback=self.parse_article_url,
-                          meta={"article_category": catagory})
+        for url in start_urls:
+            yield Request(url=url, callback=self.parse_article_page)
 
-    def parse_article_url(self, response):
+    def parse_article_page(self, response):
         """
-         解析文章链接
+        1.提取用户详情页
+        2.判断是否提取到用户信息
+          2.1 满足，则向后执行
+          2.2 否则return，终止抓取
+        3.回调用户详情页请求
+        4.翻页请求
         """
-        meta = response.meta
-        article_links = response.xpath("//div[@class='mainer']//div[@class='item']/a[1]/@href").extract()
-        # 从当前页面获取所有的文章链接以及文章摘要
-        for link in article_links:
-            url = self.domain + link
-            meta["article_link"] = url
-            meta["article_id"] = get_number(url)
-            yield Request(url=url,
-                          callback=self.parse_article_info,
-                          meta=meta)
-        # 然后翻页查询新文章
-        base_url, page = response.url.split("index")
-        page = get_number(page) or 1
-        new_urls = list({base_url + url for url in response.xpath("//div[@class='area-pager']//a//@href").extract()})
-        if new_urls:
-            print(base_url + "index_{0}.htm".format(int(page) + 1))
-            yield Request(url=base_url + "index_{0}.htm".format(int(page) + 1), callback=self.parse_article_url,
-                          meta=meta)
+        # 提取用户详情页连接
+        user_links = response.xpath("//p[@class='article-info']//@href").extract()
+        # 若无链接被提取，说明该页提取完毕
+        if not user_links:
+            return
+        user_ids = {get_number(link) for link in user_links}
+        # 用户详情页
+        for user_id in user_ids:
+            yield Request(url=self.user_domain.format(user_id), callback=self.parse_user_page,
+                          meta={"user_id": user_id})
+            # 翻页，提取后续用户详情页
+            base_url, page = response.url.split("index")
+            page = get_number(page) or 1
+            yield Request(url=base_url + "index_{0}.htm".format(int(page) + 1), callback=self.parse_article_page)
 
-    def parse_article_info(self, response):
+    def parse_user_page(self, response):
+        self.logger.warning("[User] Start to crawler use page %s" % response.url)
+        meta = response.meta
+        user_item = AcfunUserItem()
+        # 基本信息提取
+        user_item["user_id"] = meta["user_id"]
+        user_item["user_icon_link"] = self.get_icon_link(response.xpath(
+            "//div[@id='anchorMes']//div[@class='img']//@style").extract_first())
+        user_item["user_name"] = response.xpath(
+            "//div[@class='clearfix']//div[@class='name fl text-overflow']//text()").extract_first()
+        user_item["user_info"] = response.xpath("//div[@class='infoM']//text()").extract_first()
+        user_item["follows"] = response.xpath(
+            "//div[@class='clearfix']//span[@class='fl follow']//text()").extract_first()
+        user_item["fans"] = response.xpath("//div[@class='clearfix']//span[@class='fl fans']//text()").extract_first()
+        # 返回item
+        yield user_item
+        # 关注关系提取
+        flow_url = self.flow_domain.format(user_id=meta["user_id"], ftype=self.FOLLOW, page=1)
+        yield Request(url=flow_url, callback=self.parse_relationship,
+                      meta={"user_id": meta["user_id"], "relation_type": self.FOLLOW, "page": 1})
+        # 粉丝关系提取
+        flowed_url = self.flow_domain.format(user_id=meta["user_id"], ftype=self.FANS, page=1)
+        yield Request(url=flowed_url, callback=self.parse_relationship,
+                      meta={"user_id": meta["user_id"], "relation_type": self.FANS, "page": 1})
+
+    def parse_relationship(self, response):
         """
-        1、解析具体的文章页面
-        2、请求解析用户信息页
-        3、请求解析评论页
+        1.首先提取关系link
+        2.返回所有Item， 提取新的user，并请求user信息
+        3.对关系页进行翻页
         """
+        self.logger.warning("[Relation] Start to crawler relation page %s" % response.url)
         meta = response.meta
-        loader = ItemLoader(item=AcFunArticleItem(), response=response)
-        # add xpath
-        loader.add_xpath("author", "//a[@id='btn-follow-author']/@data-name")
-        loader.add_xpath("pubtime", "//span[@class='time']//text()")
-        loader.add_xpath("article_content", "//div[@id='area-player']//text()",
-                         MapCompose(lambda x: x.strip() if x.strip() else None),
-                         Join("\n"))
-        loader.add_xpath("article_title", "//p[@id='title_1']/span[@class='txt-title-view_1']//text()")
-        # add raw value
-        loader.add_value("article_link", meta["article_link"])
-        loader.add_value("article_id", meta["article_id"])
-        loader.add_value("article_category", meta["article_category"])
-        yield loader.load_item()
-        # 抓取用户信息
-        yield Request(url=self.user_domain + str(meta["article_id"]) + ".aspx",
-                      callback=self.parse_user_info,
-                      meta={"user_id": meta["article_id"]})
-        # 抓取评论
-        # params_str = "?contentId={0}&currentPage=1".format(meta["article_id"])
-        # yield Request(url=self.comment_list_json_url+params_str,
-        #               callback=self.parse_comment_info,
-        #               meta={"article_id": meta["article_id"]})
+        # 提取json中的关注信息
+        relation_datas = json.loads(response.text)
+        page_content = relation_datas["data"]["html"]
+        user_links = Selector(text=page_content).xpath("//a//@href").extract()
+        relation_user_ids = {get_number(link) for link in user_links}
+        # 请求其他用户页
+        for relation_user_id in relation_user_ids:
+            if meta["relation_type"] == self.FOLLOW:
+                yield AcfunUserFllowItem(user_id=meta["user_id"], follow_user_id=relation_user_id)
+            elif meta["relation_type"] == self.FANS:
+                yield AcfunUserFansItem(user_id=meta["user_id"], fan_user_id=relation_user_id)
+        for link in user_links:
+            yield Request(url=self.domain + link, callback=self.parse_user_page, meta={
+                "user_id": get_number(link)
+            })
+        # 确定是否翻页
+        if relation_datas["data"]["page"]["totalPage"] > meta["page"]:
+            yield Request(url=self.flow_domain.format(user_id=meta["user_id"],
+                                                      ftype=meta["relation_type"],
+                                                      page=meta["page"] + 1),
+                          callback=self.parse_relationship,
+                          meta={"user_id": meta["user_id"], "ftype": meta["relation_type"], "page": meta["page"] + 1})
 
-    def parse_user_info(self, response):
-        meta = response.meta
-        user_loader = ItemLoader(item=AcFunUserItem(), response=response)
-        # add xpath
-        user_loader.add_xpath("user_name", "//div[@class='mesL fl']//div[@class='name fl text-overflow']//text()")
-        user_loader.add_xpath("user_info", "//div[@class='mesL fl']//div[@class='infoM']//text()")
-        # add raw value
-        user_loader.add_value("user_id", meta["user_id"])
-        # 获取用户文章信息
-        yield user_loader.load_item()
-        # user_params_str = "?uid={0}&type=article&orderBy=2&pageNo=1".format(meta["user_id"])
-        # yield Request(url=self.page_url+user_params_str,
-        #               callback=self.parse_user_detail_article,
-        #               meta={"page": 1,
-        #                     "uid": meta["user_id"]})
-
-    def parse_user_detail_article(self, response):
-        meta = response.meta
-        article_obj = json.loads(response.text)
-
-    def parse_comment_info(self, response):
-        return
+    def get_icon_link(self, raw_link):
+        return re.search(ICON_PATTERN, raw_link).group()[2:-2]
 
 
 if __name__ == '__main__':
     # test
+    import scrapy.spidermiddlewares.httperror
     from scrapy.crawler import CrawlerProcess
+
     # 初始化一个下载中间件的配置
     process = CrawlerProcess(settings={"User-Agent": "Mozilla/5.0",
                                        "ITEM_PIPELINES": {'story.pipelines.MongoPipeline': 300},
                                        "MONGO_URI": "localhost:27017",
-                                       "MONGO_DATABASE": "story"
+                                       "MONGO_DATABASE": "story",
+                                       "LOG_LEVEL": "WARNING"
                                        })
-    process.crawl(AcFunSpider)
+    process.crawl(AcfunSpider)
     process.start()

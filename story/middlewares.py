@@ -2,7 +2,6 @@
 from scrapy.exceptions import IgnoreRequest
 from scrapy.http.request import Request
 from scrapy.http.response import Response
-from story.items import StoryItem
 
 
 class MyCustomDownloaderMiddleware(object):

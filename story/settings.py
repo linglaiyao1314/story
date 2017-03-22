@@ -12,7 +12,7 @@
 BOT_NAME = 'story'
 
 # 爬虫模块集合
-SPIDER_MODULES = ['story.spiders', 'story.videospider']
+SPIDER_MODULES = ['story.spiders']
 # 通过genspider命令创建spider到指定的NEWSPIDER_MODULE目录下
 NEWSPIDER_MODULE = 'story.spiders'
 
@@ -73,6 +73,7 @@ ITEM_PIPELINES = {
 # BaseMongoSetting
 MONGO_URI = "localhost:27017"
 MONGO_DATABASE = "story"
+LOG_LEVEL = "WARNING"
 
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html

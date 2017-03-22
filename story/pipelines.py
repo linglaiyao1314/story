@@ -1,7 +1,55 @@
 # -*- coding: utf-8 -*-
 import pymongo
-import time
-from story.items import AcFunUserItem, AcFunArticleItem
+from story.items import AcfunUserItem, AcfunUserFansItem, AcfunUserFllowItem
+
+
+def register_process_class(spidername):
+    class_name_prefix = spidername.capitalize()
+    # 动态构建item处理类
+    process_class = globals().get(class_name_prefix + "ItemProcess", ItemProcess)
+    return process_class
+
+
+class ItemProcess(object):
+    def process_item(self, item):
+        return item
+
+
+class AcfunItemProcess(ItemProcess):
+    def process_item(self, item):
+        if isinstance(item, AcfunUserItem):
+            return self.parse_user_item(item)
+        elif isinstance(item, AcfunUserFllowItem):
+            return self.parse_follow_item(item)
+        elif isinstance(item, AcfunUserFansItem):
+            return self.parse_fans_item(item)
+
+    def parse_user_item(self, item):
+        return {
+            "fans": int(item["fans"]),
+            "follows": int(item["follows"]),
+            "user_icon_link": item["user_icon_link"],
+            "user_id": int(item["user_id"]),
+            "user_info": item["user_info"],
+            "scheme": "acfun_user",
+            "unique": ["user_id"]
+        }
+
+    def parse_follow_item(self, item):
+        return {
+            "user_id": int(item["user_id"]),
+            "follow": int(item["follow_user_id"]),
+            "scheme": "acfun_user_relation",
+            "unique": ["user_id", "follow"]
+        }
+
+    def parse_fans_item(self, item):
+        return {
+            "user_id": int(item["fan_user_id"]),
+            "follow": int(item["user_id"]),
+            "scheme": "acfun_user_relation",
+            "unique": ["user_id", "follow"]
+        }
 
 
 class MongoPipeline(object):
@@ -14,40 +62,30 @@ class MongoPipeline(object):
     def from_crawler(cls, crawler):
         return cls(
             mongo_uri=crawler.settings.get('MONGO_URI'),
-            mongo_db=crawler.settings.get('MONGO_DATABASE', 'story')
+            mongo_db=crawler.settings.get('MONGO_DATABASE', 'story'),
         )
 
     def open_spider(self, spider):
         self.client = pymongo.MongoClient(self.mongo_uri)
         self.db = self.client[self.mongo_db]
+        self.process_class = register_process_class(spider.name)
+
 
     def close_spider(self, spider):
         self.client.close()
 
     def process_item(self, item, spider):
-        insert_item = {key: value[0] for key, value in item.items() if value}
-        if isinstance(item, AcFunUserItem):
-            if self.db["user"].find_one({"user_id": insert_item["user_id"]}):
-                pass
-            else:
-                self.db["user"].insert(insert_item)
-            return insert_item
+        process = self.process_class()
+        item = process.process_item(item)
+        collection = item.pop("scheme")
+        unique_keys = item.pop("unique")
+        condition_clauses = {key: item[key] for key in unique_keys}
+        if self.db[collection].find_one(condition_clauses):
+            self.db[collection].update_one(condition_clauses, {"$set": item})
         else:
-            if self.db[spider.collection_name].find_one({"article_id": insert_item["article_id"]}):
-                return insert_item
-            insert_item.update({"capture_time": int(time.time())})
-            self.db[spider.collection_name].insert(insert_item)
-        return insert_item
+            self.db[collection].insert_one(item)
+        return item
 
 
-class SentimentAnalysisPipeline(object):
-    analysis_url = "http://ictclas.nlpir.org/nlpir/index4/getEmotionResult.do"
 
-    def process_item(self, item, spider):
-        pass
 
-    def open_spider(self, spider):
-        pass
-
-    def close_spider(self, spider):
-        pass
