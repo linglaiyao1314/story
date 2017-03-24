@@ -72,7 +72,6 @@ class MongoPipeline(object):
         self.db = self.client[self.mongo_db]
         self.process_class = register_process_class(spider.name)
 
-
     def close_spider(self, spider):
         self.client.close()
 
@@ -86,9 +85,6 @@ class MongoPipeline(object):
             self.db[collection].update_one(condition_clauses, {"$set": item})
         else:
             self.db[collection].insert_one(item)
-            self.count += 1
-        if self.count % 2000 == 0:
-            print(spider.crawler.stats.get_stats())
         return item
 
 

@@ -19,6 +19,8 @@ class AcfunSpider(scrapy.Spider):
     domain = "http://www.acfun.cn"
     user_domain = "http://www.acfun.cn/u/{0}.aspx"
     flow_domain = "http://www.acfun.cn/space/next?uid={user_id}&type={ftype}&orderBy=2&pageNo={page}"
+    user_set = set()
+    user_relation_set = set()
 
     def start_requests(self):
         """
@@ -50,6 +52,9 @@ class AcfunSpider(scrapy.Spider):
         user_ids = {get_number(link) for link in user_links}
         # 用户详情页
         for user_id in user_ids:
+            if user_id in self.user_set:
+                continue
+            self.user_set.add(user_id)
             yield Request(url=self.user_domain.format(user_id), callback=self.parse_user_page,
                           meta={"user_id": user_id})
             # 翻页，提取后续用户详情页
@@ -88,28 +93,32 @@ class AcfunSpider(scrapy.Spider):
         3.对关系页进行翻页
         """
         meta = response.meta
-        # 提取json中的关注信息
-        relation_datas = json.loads(response.text)
-        page_content = relation_datas["data"]["html"]
-        user_links = Selector(text=page_content).xpath("//a//@href").extract()
-        relation_user_ids = {get_number(link) for link in user_links}
-        # 请求其他用户页
-        for relation_user_id in relation_user_ids:
-            if meta["relation_type"] == self.FOLLOW:
-                yield AcfunUserFllowItem(user_id=meta["user_id"], follow_user_id=relation_user_id)
-            elif meta["relation_type"] == self.FANS:
-                yield AcfunUserFansItem(user_id=meta["user_id"], fan_user_id=relation_user_id)
-        for link in user_links:
-            yield Request(url=self.domain + link, callback=self.parse_user_page, meta={
-                "user_id": get_number(link)
-            })
-        # 确定是否翻页
-        if relation_datas["data"]["page"]["totalPage"] > meta["page"]:
-            yield Request(url=self.flow_domain.format(user_id=meta["user_id"],
-                                                      ftype=meta["relation_type"],
-                                                      page=meta["page"] + 1),
-                          callback=self.parse_relationship,
-                          meta={"user_id": meta["user_id"], "relation_type": meta["relation_type"], "page": meta["page"] + 1})
+        if meta["user_id"] in self.user_relation_set:
+            return
+        else:
+            self.user_relation_set.add(meta["user_id"])
+            # 提取json中的关注信息
+            relation_datas = json.loads(response.text)
+            page_content = relation_datas["data"]["html"]
+            user_links = Selector(text=page_content).xpath("//a//@href").extract()
+            relation_user_ids = {get_number(link) for link in user_links}
+            # 请求其他用户页
+            for relation_user_id in relation_user_ids:
+                if meta["relation_type"] == self.FOLLOW:
+                    yield AcfunUserFllowItem(user_id=meta["user_id"], follow_user_id=relation_user_id)
+                elif meta["relation_type"] == self.FANS:
+                    yield AcfunUserFansItem(user_id=meta["user_id"], fan_user_id=relation_user_id)
+            for link in user_links:
+                yield Request(url=self.domain + link, callback=self.parse_user_page, meta={
+                    "user_id": get_number(link)
+                })
+            # 确定是否翻页
+            if relation_datas["data"]["page"]["totalPage"] > meta["page"]:
+                yield Request(url=self.flow_domain.format(user_id=meta["user_id"],
+                                                          ftype=meta["relation_type"],
+                                                          page=meta["page"] + 1),
+                              callback=self.parse_relationship,
+                              meta={"user_id": meta["user_id"], "relation_type": meta["relation_type"], "page": meta["page"] + 1})
 
     def get_icon_link(self, raw_link):
         return re.search(ICON_PATTERN, raw_link).group()[2:-2]
