@@ -4,14 +4,14 @@ import pynlpir
 from contextlib import contextmanager
 
 # 通用正则表达式
-CHINESE_PATTERN = re.compile(u"[\u4e00-\u9fa5]")
-NOT_CHINESE_PATTERN = re.compile(u"[^\u4e00-\u9fa5]")
-NUMBER_PATTERN = re.compile(u"[\d]")
-UNICODE_PATTERN = re.compile(u"[\u4e00-\u9fa5|\w\W]")
+CHINESE_PATTERN = re.compile("[\u4e00-\u9fa5]")
+NOT_CHINESE_PATTERN = re.compile("[^\u4e00-\u9fa5]")
+NUMBER_PATTERN = re.compile("[\d]")
+UNICODE_PATTERN = re.compile("[\u4e00-\u9fa5|\w\W]")
 
 
 # 过滤出字符串的中文
-def parse_chinese(s, to_str):
+def parse_chinese(s, to_str=True):
     filter_list = filter(lambda x: re.match(CHINESE_PATTERN, x), s)
     if to_str:
         return "".join(filter_list)

@@ -2,7 +2,6 @@
 import scrapy
 from scrapy.http import Request
 from scrapy.selector import Selector
-from scrapy.statscollectors import MemoryStatsCollector
 import simplejson as json
 import re
 
@@ -13,18 +12,24 @@ ICON_PATTERN = re.compile("(\(.*?\))")
 
 
 class AcfunSpider(scrapy.Spider):
-    FOLLOW = "flow"  # 关注
-    FANS = "flowed"  # 粉丝
+    # 关注
+    FOLLOW = "flow"
+    # 粉丝
+    FANS = "flowed"
     name = "acfun"
+    # 站点id
+    site_id = 1
     domain = "http://www.acfun.cn"
     user_domain = "http://www.acfun.cn/u/{0}.aspx"
     flow_domain = "http://www.acfun.cn/space/next?uid={user_id}&type={ftype}&orderBy=2&pageNo={page}"
+
+    # 用户id集合与用户关系集合，主要用于去重，之后将会用redis做去重工作
     user_set = set()
     user_relation_set = set()
 
     def start_requests(self):
         """
-        以文章区为起始页开始抓取
+        抓取文章区的用户id，以下均为文章区的起始页
         """
         start_urls = ["http://www.acfun.cn/v/list110/index.htm",
                       "http://www.acfun.cn/v/list73/index.htm",
@@ -66,6 +71,7 @@ class AcfunSpider(scrapy.Spider):
         meta = response.meta
         user_item = AcfunUserItem()
         # 基本信息提取
+        user_item["user_link"] = response.url
         user_item["user_id"] = meta["user_id"]
         user_item["user_icon_link"] = self.get_icon_link(response.xpath(
             "//div[@id='anchorMes']//div[@class='img']//@style").extract_first())

@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 import pymongo
+from elasticsearch import Elasticsearch
+
 from story.items import AcfunUserItem, AcfunUserFansItem, AcfunUserFllowItem
 
 
@@ -13,16 +15,6 @@ def register_process_class(spidername):
 class ItemProcess(object):
     def process_item(self, item):
         return item
-
-
-class AcfunItemProcess(ItemProcess):
-    def process_item(self, item):
-        if isinstance(item, AcfunUserItem):
-            return self.parse_user_item(item)
-        elif isinstance(item, AcfunUserFllowItem):
-            return self.parse_follow_item(item)
-        elif isinstance(item, AcfunUserFansItem):
-            return self.parse_fans_item(item)
 
     def parse_user_item(self, item):
         return {
@@ -51,6 +43,16 @@ class AcfunItemProcess(ItemProcess):
             "scheme": "acfun_user_relation",
             "unique": ["user_id", "follow"]
         }
+
+
+class AcfunItemProcess(ItemProcess):
+    def process_item(self, item):
+        if isinstance(item, AcfunUserItem):
+            return self.parse_user_item(item)
+        elif isinstance(item, AcfunUserFllowItem):
+            return self.parse_follow_item(item)
+        elif isinstance(item, AcfunUserFansItem):
+            return self.parse_fans_item(item)
 
 
 class MongoPipeline(object):
@@ -87,6 +89,26 @@ class MongoPipeline(object):
             self.db[collection].insert_one(item)
         return item
 
+
+class ElasticsearchPipeline(object):
+    def __init__(self, hosts):
+        self.hosts = hosts
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls(
+            hosts=crawler.settings.get('ES_HOSTS'),
+        )
+
+    def open_spider(self, spider):
+        self.client = Elasticsearch(hosts=self.hosts)
+        self.process_class = register_process_class(spider.name)
+
+    def close_spider(self, spider):
+        pass
+
+    def process_item(self, item, spider):
+        pass
 
 
 
